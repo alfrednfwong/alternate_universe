@@ -1,0 +1,8 @@
+ways that counterfactual explanations won't make sense:
+  x doesnt match x**2
+  "if your marital status wasnt NaN, we would have approved"
+  "300 sqft and 5 bedrooms"
+  multiclass dummy variables: "if your "location_kowloon" was 0 instead of 1 we would have approved". also depends on whether we use drop_first in get_dummies().
+    a related thing is that, with multiclass dummies, chaning the class is actually changing 2 variables.
+
+how do we handle boolean features when normalizing?
