@@ -1,6 +1,6 @@
 # Alternate Universe
 
-Work in progress.
+Work in progress. (almost done :D )
 
 Xccelerate HK capstone project. A system to provide counterfactual examples to a classified datapoint in a machine learning model, that serves as a human interpretable aid to understand what a supposedly black box model is doing.
 
