@@ -1,6 +1,10 @@
 import time
 
 def timer():
+    '''
+    A timer to be used as a decorator, printing time used for a function to run
+    in microseconds.
+    '''
     def timer(fnc):
         def inner(*arg):
             # inner function

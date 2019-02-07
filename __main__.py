@@ -3,6 +3,24 @@ import counterfactual as cf
 import numpy as np
 
 def main(vals, params, to_freeze=[]):
+    '''
+    Main function for the deployment of counterfactual example search on the
+    Freddie Mac mortgage delinquency classifier model.
+    :param vals: dict. Feature values of the data point of interest.
+    :param params: dict. Search parameters.
+    :param to_freeze: list. List of feature names to freeze in the cf search
+    :return: tuple of:
+      float. probability of the initial data point being of class 1.
+      int. predicted class of the initial data point
+      dict. names of features changed in the cf example as keys, the new values
+        as values.
+      numpy array, [num_features] the values of the counterfactual example
+      float. probability of the cf example being of class 1
+      int. predicted class of the cf example
+      float. the norm at which the cf example is found
+      int. the number of (unsparsified, not all returned) cf examples found at
+        that norm.
+    '''
     model = FreddieMacModel()
     initial_vals = np.array([
         vals['bought_home_before'],
@@ -25,7 +43,11 @@ def main(vals, params, to_freeze=[]):
         sparsifier_buffer=params['sparsifier_buffer'],
         model=model
     )
-    cfq.model.df_features_attrs.loc[to_freeze, 'feature_type'] = 'frozen'
+    # to_freeze comes in feature names. Here we make list of indices out of it.
+    i_to_freeze = []
+    for elem in to_freeze:
+        i_to_freeze.append(model.name_to_i[elem])
+    cfq.model.df_features_attrs.loc[i_to_freeze, 'feature_type'] = 'frozen'
 
     cf_result = cfq.solve()
     if cf_result:
@@ -41,7 +63,7 @@ def main(vals, params, to_freeze=[]):
     print(f'with a predicted probability of {cf_proba}\n')
     print(f'Features changed:\n{features_changed}')
     return (
-        features_changed, initial_proba, initial_decision, cf_example, cf_proba,
+        initial_proba, initial_decision, features_changed, cf_example, cf_proba,
         cf_decision, found_norm, num_found
     )
 
