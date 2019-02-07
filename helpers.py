@@ -1,12 +1,11 @@
 import time
 
-
 def timer():
     def timer(fnc):
-        def inner(arg):
+        def inner(*arg):
             # inner function
             start = time.time()
-            func_result = fnc(arg)
+            func_result = fnc(*arg)
             end = time.time()
             elapsed = (end - start) * 1000000
             print(f'Time elapsed: {str(elapsed)} microsec')
@@ -15,3 +14,4 @@ def timer():
         return inner
 
     return timer
+

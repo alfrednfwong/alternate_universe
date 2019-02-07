@@ -1,0 +1,11 @@
+feature_index	name	feature_type	distance_weight	u_bound	l_bound	num_cats
+0	bought_home_before	binary	1			
+1	credit_score	cont	0.016949153	850	300	
+2	dti	cont	0.008695652		5	
+3	is_insured	binary	1			
+4	ltv	cont	0.05		5	
+5	multi_borrowers	binary	1			
+6	orig_rate	cont	1	60	0.01	
+7	prop_type	mcat	1			5
+8	purpose	mcat	1			3
+9	state	mcat	2			14
