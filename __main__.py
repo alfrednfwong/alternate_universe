@@ -52,6 +52,8 @@ def main(vals, params, to_freeze=[]):
     cf_result = cfq.solve()
     if cf_result:
         cf_example, cf_proba, found_norm, num_found = cf_result
+    else:
+        return None
     features_changed = {}
     for i in np.where(cf_example != initial_vals)[0]:
         features_changed[model.i_to_name[i]] = cf_example[i]
