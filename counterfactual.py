@@ -230,7 +230,7 @@ class Sparsifier():
             )
         return trivialities
 
-    def sparsify(self, predict, clf, ohc):
+    def sparsify(self, predict):
         '''
         Changes as many features in the dense_point as possible back to the
         initial values, with the constraint that the output is still a
@@ -243,7 +243,7 @@ class Sparsifier():
         :return: numpy array, (num_features,)
         '''
         while True:
-            trivialities = self.what_if_reduce(predict, clf, ohc)
+            trivialities = self.what_if_reduce(predict)
             # if none of the triviality ratings is positive, that means none
             # of the features can be sparsified
             if (trivialities <= 0).all():
@@ -407,9 +407,7 @@ class CfQuestion():
             dense, self.initial_vals, self.cf_y, self.cf_threshold,
             changed
         )
-        sparse = spr.sparsify(
-            self.predict_point, self.model.clf, self.model.ohc
-        )
+        sparse = spr.sparsify(self.predict_point)
         # note that this proba is the probability of sparse being 1, not of it
         # being the desired class
         sparse_proba = self.predict_point(sparse, 1)
