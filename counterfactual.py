@@ -3,6 +3,23 @@ import pandas as pd
 from copy import copy, deepcopy
 from helpers import timer
 
+# number of samples to take when hugging the boundary, including the
+# current sparse point and initial point
+# temporary measure. should be made into a search param instead of hard coded.
+NUM_SAMPLES = 10
+
+# how close the boundary hugger has to get to the decision threshold for it
+# to be an acceptable counterfactual. Again it should be made into a search
+# param instead of being hard coded.
+PRECISION = 0.005
+
+# Again this should be made into a search param.
+# With classifier models that has vertical jumps in the decision function, like
+# trees, it is possible that the decision boundary hugger enter into an infinite
+# loop -- when the point to be reduced and the target point lie on opposite
+# sides of a tree split. The loop will be forced to stop after this many
+# iterations and return a cf that is not really close to the decision boundary.
+HUGGER_SAFETY = 20
 
 class Diamond():
     '''
@@ -238,8 +255,6 @@ class Sparsifier():
         :param predict: Callable. A function to return the probability of a
             datapoint being of a specific class. To be fed into
             self.what_if_reduce()
-        :param clf. Classifier object
-        :param ohc. One-hot encoder object
         :return: numpy array, (num_features,)
         '''
         while True:
@@ -256,6 +271,82 @@ class Sparsifier():
                 )
                 # remove the index of the reverted feature from the changed list
                 self.changed = self.changed[self.changed != idx_to_reduce]
+
+    def hug_boundary(self, point, predict, is_cont):
+        '''
+        Takes in a sparsified point, and further reduce any continuous feature,
+        if any are changed, to as close to the original as possible while
+        keeping the point's output counterfactual
+        :param point: numpy array [num_features,] The sparsified point to reduce
+        :param predict: callable. A function to return the probability of a
+            datapoint being of a specific class.
+        :param is_cont: numpy array [num_features,] Booleans indicating
+        :return: numpy array [num_features,] the reduced point
+        '''
+        cf_point = copy(point)
+        # note that strictly speaking the logic here for the original class
+        # point is not actually initial_vals, but rather point with the
+        # to_reduce reverted to the corresponding value in initial_vals.
+        # but coding it this way saves a few lines, and the orig_cls_point wont
+        # be used other than to extract that corresponding value, and will be
+        # overwritten after one iteration anyway.
+        orig_cls_point = copy(self.initial_vals)
+        conts_changed = np.intersect1d(np.where(is_cont)[0], self.changed)
+        if conts_changed.size == 0:
+            # so all features changed are categorical. No reduction can be done.
+            return cf_point
+        # randomly pick one of the changed continuous features to reduce
+        to_reduce = np.random.choice(conts_changed)
+        # loop til we find a cf point where
+        # cf_threshold < cf_proba < (cf_threshold + PRECISION)
+        iter_num = 0
+        while True:
+            # A safety to make sure it wont loop indefinitely, as may happen
+            # with decision functions that involves vertical jumps, like in
+            # trees.
+            iter_num += 1
+            # draw a number of evenly spaced samples, along the dimenion of
+            # to_reduce, from (cf_point but with feature[to_reduce] reverted to
+            # original), to cf_point
+            val_samples = np.linspace(
+                orig_cls_point[to_reduce], cf_point[to_reduce], NUM_SAMPLES
+            )
+            
+            point_samples = np.repeat([cf_point], NUM_SAMPLES, axis=0)
+            point_samples[:, to_reduce] = val_samples
+            distances_from_boundary = np.zeros(NUM_SAMPLES)
+            # then predict the proba of them all. here the prediction func takes
+            # two args so we have to loop thru rather than vectorize. But this
+            # operation isnt all that demanding anyway.
+            for i in range(NUM_SAMPLES):
+                distances_from_boundary[i] = (
+                    predict(point_samples[i], self.cf_y) - self.cf_threshold
+                )
+            acceptables = np.where(
+                (distances_from_boundary > 0) &
+                (distances_from_boundary < PRECISION)
+            )[0]
+            
+            if acceptables.size > 0:
+                return point_samples[acceptables[0]]
+            if iter_num > HUGGER_SAFETY:
+                print('Boundary hugger iteration number maximum reached.')
+                return cf_point
+            else:
+                # if none of the probas lie within the acceptable range, we pick
+                # the closest cf point to the initial value as the new cf_point
+                # and the one on it's immediate left (ie, to the initial side)
+                # as the new orig_cls_point
+                cf_point = (
+                    point_samples[
+                        np.where(distances_from_boundary > 0)[0][0]
+                    ]
+                )
+                orig_cls_point = (
+                    point_samples[
+                        np.where(distances_from_boundary > 0)[0][0] - 1
+                    ]
+                )
 
 
 class CfQuestion():
@@ -408,10 +499,12 @@ class CfQuestion():
             changed
         )
         sparse = spr.sparsify(self.predict_point)
+        is_cont = np.array(self.model.df_features_attrs.feature_type == 'cont')
+        final_cfe = spr.hug_boundary(sparse, self.predict_point, is_cont)
         # note that this proba is the probability of sparse being 1, not of it
         # being the desired class
-        sparse_proba = self.predict_point(sparse, 1)
-        return (sparse, sparse_proba, found_norm, num_found)
+        final_cfe_proba = self.predict_point(final_cfe, 1)
+        return (final_cfe, final_cfe_proba, found_norm, num_found)
 
 
 class ClassifierModel():
