@@ -1,8 +1,6 @@
 # Alternate Universe
 
-Work in progress. (almost done :D )
-
-Xccelerate HK capstone project. A system to provide counterfactual examples to a classified datapoint in a machine learning model, that serves as a human interpretable aid to understand what a supposedly black box model is doing.
+A model-agnostic algorithm to provide counterfactual examples to a classified datapoint in a machine learning model, that serves as a human interpretable aid to understand what a supposedly black box model is doing.
 
 e.g. A customer's loan application is rejected by the bank's decision algorithm and he invokes the GDPR's right to explanation clause and requests an explanation. Our system will generate combinations of features, which are as close to the applicant's as possible, and yet would get the decision algorithm to return the "approve" class, like "Had your income been 40k instead of 32k, we would have approved the loan."
 
